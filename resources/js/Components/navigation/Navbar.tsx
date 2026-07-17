@@ -1,16 +1,16 @@
 import { useState } from "react";
 import { Link } from "@inertiajs/react";
 import {
-    Menu,
-    X,
     ShoppingBag,
-    User,
 } from "lucide-react";
 import ThemeToggle from "./ThemeToggle";
 
+import { useCart } from "@/Contexts/CartContext";
+
+
 interface NavbarProps {
-    cartCount?: number;
-    userName?: string;
+     cartOpen: boolean;
+    setCartOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 interface NavItem {
@@ -19,10 +19,13 @@ interface NavItem {
 }
 
 export default function Navbar({
-    cartCount = 0,
-    userName = "Tamu",
+    cartOpen,
+    setCartOpen,
 }: NavbarProps) {
-    const [open, setOpen] = useState(false);
+
+    const { cart } = useCart();
+
+    const cartCount = cart.reduce((total, item) => total + item.qty, 0);
 
     const navItems: NavItem[] = [
         { label: "Beranda", href: "/" },
@@ -92,6 +95,7 @@ export default function Navbar({
                                 hover:bg-matcha-100
                                 dark:hover:bg-matcha-800
                             "
+                            onClick={() => setCartOpen(!cartOpen)}
                         >
                             <ShoppingBag
                                 size={20}

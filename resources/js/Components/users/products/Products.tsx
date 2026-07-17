@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Coffee, Cookie, LayoutGrid, CakeSlice, Leaf } from "lucide-react";
 import { FaSearch, FaSlidersH } from "react-icons/fa";
+import { useCart } from "@/Contexts/CartContext";
+import { toast } from "react-hot-toast";
 
 interface Category {
     id: number;
@@ -43,9 +45,11 @@ const formatRupiah = (angka: number) =>
         minimumFractionDigits: 0,
     }).format(angka);
 
-export default function Beranda({ categories, products }: ProductsProps) {
+export default function Products({ categories, products }: ProductsProps) {
     const [kategoriAktif, setKategoriAktif] = useState("semua");
     const [searchQuery, setSearchQuery] = useState("");
+
+    const { addToCart } = useCart();
 
     const kategoriList: Category[] = [
         {
@@ -68,6 +72,36 @@ export default function Beranda({ categories, products }: ProductsProps) {
 
         return cocokKategori && cocokSearch;
     });
+
+    const handleTambahKeKeranjang = (product: Product) => {
+        addToCart({
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            image: product.image,
+            qty: 1,
+        });
+
+        // Pemicu Toast Kustom dengan tema Matcha & Cream
+        toast.success(`${product.name} berhasil ditambahkan!`, {
+            style: {
+                borderRadius: '1rem',
+                background: typeof window !== 'undefined' && document.documentElement.classList.contains('dark') 
+                    ? '#1c2e24' // Warna matcha-950 saat dark mode
+                    : '#fff',
+                color: typeof window !== 'undefined' && document.documentElement.classList.contains('dark') 
+                    ? '#fcfbf7' // Warna cream-50 saat dark mode
+                    : '#2d4a3a', // Warna matcha-900 saat light mode
+                fontSize: '14px',
+                fontWeight: '500',
+                border: '1px solid rgba(45, 74, 58, 0.1)',
+            },
+            iconTheme: {
+                primary: '#4c7a60', // Warna matcha-500 untuk icon check
+                secondary: '#fcfbf7',
+            },
+        });
+    };
 
     return (
         <>
@@ -217,6 +251,7 @@ export default function Beranda({ categories, products }: ProductsProps) {
                                         {formatRupiah(product.price)}
                                     </span>
                                     <button
+                                        onClick={() => handleTambahKeKeranjang(product)}
                                         className="rounded-full bg-matcha-500 px-2.5 py-0.5 text-[10px] font-semibold
                                                text-cream-50 shadow-sm transition-all duration-200 
                                                hover:bg-matcha-600 active:scale-95 sm:px-3 sm:py-1 sm:text-xs lg:px-5 lg:py-2 lg:text-sm"
