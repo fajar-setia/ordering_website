@@ -5,10 +5,19 @@ import { Minus, Plus, ShoppingBag, Trash2, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import CheckoutForm from './CheckoutForm';
 import { useState } from 'react';
+// Import router dari Inertia untuk mengirim data ke backend Laravel
+import { router } from '@inertiajs/react';
+import SuccessModal from '../SuccessModal';
 
 interface CartDrawerProps {
     open: boolean;
     onClose: () => void;
+}
+
+interface LocalCheckoutData {
+    nama: string;
+    nomorMeja: string;
+    catatan: string;
 }
 
 const formatRupiah = (angka: number) =>
@@ -19,12 +28,56 @@ const formatRupiah = (angka: number) =>
     }).format(angka);
 
 export default function CartDrawer({ open, onClose }: CartDrawerProps) {
-    const { cart, removeItem, increaseQty, decreaseQty } = useCart();
+    // Pastikan clearCart dipanggil dari CartContext agar bisa mengosongkan keranjang setelah submit sukses
+    const { cart, removeItem, increaseQty, decreaseQty, clearCart } = useCart();
 
     const [checkout, setCheckout] = useState(false);
+    // State internal untuk menangani status loading/processing saat submit ke Laravel
+    const [processing, setProcessing] = useState(false);
+
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
+    const [successData, setSuccessData] = useState({ nama: '', nomorMeja: '' });
 
     const total = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
     const totalItem = cart.reduce((sum, item) => sum + item.qty, 0);
+
+    // Fungsi Handler untuk Aksi Submit dari CheckoutForm
+    const handleCheckoutSubmit = (formData: LocalCheckoutData) => {
+        if (cart.length === 0) return;
+
+        setProcessing(true);
+        const loadingToast = toast.loading('Sedang mengirim pesanan ke dapur...');
+
+        // Mengirimkan objek datar (flat) langsung agar dibaca oleh validasi OrderController
+        router.post('/checkout', {
+            nama: formData.nama,
+            nomorMeja: formData.nomorMeja,
+            catatan: formData.catatan,
+            items: cart as any, // Mencegah error 'Index signature missing' di TypeScript
+            total: total
+        }, {
+            onSuccess: () => {
+                toast.dismiss(loadingToast);
+                toast.success('🚀 Pesanan berhasil dibuat! Mohon tunggu di meja Anda.', {
+                    duration: 3000,
+                });
+                setSuccessData({ nama: formData.nama, nomorMeja: formData.nomorMeja });
+                
+                // Bersihkan keranjang dan reset layar state frontend
+                clearCart(); 
+                setCheckout(false);
+                setProcessing(false);
+                onClose();
+                setShowSuccessModal(true);
+            },
+            onError: (errors) => {
+                toast.dismiss(loadingToast);
+                toast.error('Gagal mengirim pesanan. Silakan coba beberapa saat lagi.');
+                setProcessing(false);
+                console.error(errors);
+            }
+        });
+    };
 
     // 2. Fungsi Toast Konfirmasi Kustom untuk Hapus Item
     const konfirmasiHapus = (id: number, name: string, viaMinus = false) => {
@@ -93,6 +146,7 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
     };
 
     return (
+        <>
         <AnimatePresence>
             {open && (
                 <>
@@ -145,9 +199,8 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
                             <CheckoutForm
                                 total={total}
                                 onBack={() => setCheckout(false)}
-                                onSubmit={() => {
-                                    console.log("submit");
-                                }}
+                                processing={processing}
+                                onSubmit={handleCheckoutSubmit as any}
                             />
                         ) : (
                             <div className="flex flex-1 flex-col overflow-hidden">
@@ -227,7 +280,7 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
                                                                 {formatRupiah(item.price * item.qty)}
                                                             </p>
                                                             <button
-                                                                    onClick={() => konfirmasiHapus(item.id, item.name, false)}
+                                                                onClick={() => konfirmasiHapus(item.id, item.name, false)}
                                                                 aria-label={`Hapus ${item.name}`}
                                                                 className="text-matcha-300 transition-colors hover:text-red-500
                                                                            dark:text-matcha-600 dark:hover:text-red-400"
@@ -258,7 +311,6 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
                                                 {formatRupiah(total)}
                                             </span>
                                         </div>
-                                        {/* PERBAIKAN: Menambahkan onClick untuk mengaktifkan form checkout */}
                                         <button
                                             onClick={() => setCheckout(true)}
                                             className="w-full rounded-full bg-matcha-500 py-3 text-sm font-semibold
@@ -276,5 +328,16 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
                 </>
             )}
         </AnimatePresence>
+        <AnimatePresence>
+                {showSuccessModal && (
+                    <SuccessModal
+                        isOpen={showSuccessModal}
+                        onClose={() => setShowSuccessModal(false)}
+                        customerName={successData.nama}
+                        tableNumber={successData.nomorMeja}
+                    />
+                )}
+        </AnimatePresence>
+        </>
     );
 }
