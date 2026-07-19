@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\Admin\ProductController as AdminProductController;
+use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\OrderController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -29,5 +31,21 @@ Route::get('/pesanan/sukses/{order}', function ($orderId) {
         'orderId' => $orderId
     ]);
 })->name('pesanan.sukses');
+
+Route::get('/pesanan', [OrderController::class, 'showActiveOrder'])->name('pesanan.aktif');
+
+Route::prefix('admin')->name('admin.')->group(function () {
+
+    // Route CRUD Manajemen Pesanan
+    Route::get('/orders', [AdminOrderController::class, 'index'])->name('orders.index');
+    Route::patch('/orders/{id}/status', [AdminOrderController::class, 'updateStatus'])->name('orders.update-status');
+    
+    // Route CRUD Manajemen Menu/Produk
+    Route::get('/products', [AdminProductController::class, 'index'])->name('products.index');
+    Route::post('/products', [AdminProductController::class, 'store'])->name('products.store');
+    // Laravel membutuhkan POST + Form Data _method PATCH untuk request update yang membawa file/gambar
+    Route::patch('/products/{id}', [AdminProductController::class, 'update'])->name('products.update'); 
+    Route::delete('/products/{id}', [AdminProductController::class, 'destroy'])->name('products.destroy');
+});
 
 require __DIR__.'/auth.php';

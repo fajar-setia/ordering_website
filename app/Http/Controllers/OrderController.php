@@ -7,6 +7,8 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Inertia\Inertia;
+use App\Events\OrderCreated;
 
 class OrderController extends Controller
 {
@@ -51,7 +53,31 @@ class OrderController extends Controller
             return $newOrder;
         });
 
-        // Sekarang $order->id di sini dijamin aman dan tidak akan memicu error "Undefined variable"
-        return redirect()->back()->with('success', 'Order created successfully.');
+        try {
+            event(new OrderCreated($order));
+        } catch (\Throwable $e) { // 💡 Ganti \Exception menjadi \Throwable agar semua jenis error PHP tertangkap
+            \Log::error("Gagal memicu event OrderCreated: " . $e->getMessage());
+        }
+        
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Pesanan berhasil dikirim ke dapur!',
+            'order'   => $order // Objek ini yang dicari oleh response.data.order di React
+        ]);
+    }
+    public function showActiveOrder(Request $request)
+    {
+        $orderId = $request->query('id');
+        $order = null;
+
+        if ($orderId) {
+            // Ambil data order beserta item makanan di dalamnya
+            $order = Order::with('items')->find($orderId);
+        }
+
+        return Inertia::render('Users/PesananAktif', [
+            'order' => $order
+        ]);
     }
 }
