@@ -62,7 +62,9 @@ export default function Index({ orders }: OrdersProps) {
                             "https://assets.mixkit.co/active_storage/sfx/2869/2869-600.wav",
                         );
                         audio.volume = 0.5;
-                        audio.play()
+                       audio.play().catch(() => {
+                            console.log("🔊 Info: Suara notifikasi akan berbunyi setelah admin melakukan interaksi/klik pertama di layar.");
+                        });
                     } catch (err) {
                         console.log("Audio tidak didukung oleh browser ini.");
                     }
@@ -104,6 +106,10 @@ export default function Index({ orders }: OrdersProps) {
 
     // Fungsi untuk memperbarui status pesanan ke backend
     const updateStatus = (id: string, newStatus: string) => {
+        if (!id){
+            toast.error("ID pesanan tidak valid.");
+            return;
+        }
         router.patch(
             `/admin/orders/${id}/status`,
             {

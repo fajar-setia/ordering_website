@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Order;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use App\Events\OrderStatusUpdated;
 
 class OrderController extends Controller
 {
@@ -24,25 +25,29 @@ class OrderController extends Controller
         ]);
     }
 
-    /**
-     * Memperbarui status pesanan (pending -> processing -> completed -> cancelled)
-     */
     public function updateStatus(Request $request, $id)
-    {
-        // Validasi input status agar hanya menerima status yang diizinkan
-        $validated = $request->validate([
-            'status' => 'required|in:pending,processing,completed,cancelled'
-        ]);
+{
+    // 1. Validasi input status
+    $validated = $request->validate([
+        'status' => 'required|in:pending,processing,completed,cancelled'
+    ]);
 
-        // Cari data pesanan berdasarkan ID, jika tidak ketemu akan otomatis memicu error 404
-        $order = Order::findOrFail($id);
-        
-        // Update status di database SQLite
-        $order->update([
-            'status' => $validated['status']
-        ]);
+    // 2. Cari data pesanan berdasarkan ID (Menggunakan $id biasa agar pasti ketemu)
+    $order = Order::findOrFail($id);
 
-        // Kembalikan ke halaman sebelumnya (dashboard dapur) sambil membawa flash message sukses
-        return redirect()->back()->with('success', 'Status pesanan berhasil diperbarui.');
+    // 3. Update status di database
+    $order->update([
+        'status' => $validated['status']
+    ]);
+
+    // 4. 💡 Tembakkan sinyal real-time Reverb ke HP pembeli
+    try {
+        event(new OrderStatusUpdated($order));
+    } catch (\Throwable $e) {
+        \Log::error("Gagal broadcast status update: " . $e->getMessage());
     }
+
+    // 5. Kembalikan ke halaman sebelumnya
+    return redirect()->back()->with('success', 'Status pesanan berhasil diperbarui.');
+}
 }
