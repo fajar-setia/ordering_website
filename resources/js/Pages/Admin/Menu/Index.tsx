@@ -152,7 +152,7 @@ export default function Index({ products, categories, filters }: ProductsProps) 
                             setSelectedCategory(e.target.value);
                             handleFilterChange(search, e.target.value);
                         }}
-                        className="rounded-xl border border-matcha-200 bg-cream-50/50 px-4 py-2.5 text-sm outline-none focus:border-matcha-400 dark:border-matcha-800 dark:bg-matcha-950"
+                        className="rounded-xl border border-matcha-200 bg-cream-50/50 px-4 py-2.5 text-sm outline-none focus:border-matcha-400 dark:border-matcha-800 dark:bg-matcha-950 dark:text-cream-50"
                     >
                         <option value="">Semua Kategori</option>
                         {categories.map((cat) => (
